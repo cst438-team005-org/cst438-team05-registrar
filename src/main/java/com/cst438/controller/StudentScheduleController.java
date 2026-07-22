@@ -53,8 +53,39 @@ public class StudentScheduleController {
         //  check that the current date is not before addDate, not after addDeadline
 		//  of the section's term.  Return an EnrollmentDTO with the id of the 
 		//  Enrollment and other fields.
-		
-		return null;
+
+        Section section = sectionRepository.findById(sectionNo)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "section not found " + sectionNo));
+
+        User student = userRepository.findByEmail(principal.getName());
+
+        Enrollment existing = enrollmentRepository
+                .findEnrollmentBySectionNoAndStudentId(sectionNo, student.getId());
+        if (existing != null) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "student already enrolled in section " + sectionNo);
+        }
+
+        Term term = section.getTerm();
+        Date today = new Date();
+        if (today.before(term.getAddDate()) || today.after(term.getAddDeadline())) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "section not open for enrollment " + sectionNo);
+        }
+
+        Enrollment enrollment = new Enrollment();
+        enrollment.setSection(section);
+        enrollment.setStudent(student);
+        enrollmentRepository.save(enrollment);
+
+        EnrollmentDTO dto = toDTO(enrollment);
+
+        // notify Gradebook service (stateless, no shared database) so it
+        // creates the matching enrollment record using the same primary key.
+        gradebook.sendMessage("addEnrollment", dto);
+
+        return dto;
     }
 
     // student drops a course
@@ -65,6 +96,51 @@ public class StudentScheduleController {
         // check that enrollment belongs to the logged in student
 		// and that today is not after the dropDeadLine for the term.
 
+        Enrollment enrollment = enrollmentRepository.findById(enrollmentId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "enrollment not found " + enrollmentId));
+
+        if (!enrollment.getStudent().getEmail().equals(principal.getName())) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN, "enrollment does not belong to logged in student " + enrollmentId);
+        }
+
+        Term term = enrollment.getSection().getTerm();
+        Date today = new Date();
+        if (today.after(term.getDropDeadline())) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "drop deadline has passed for term " + term.getTermId());
+        }
+
+        enrollmentRepository.deleteById(enrollmentId);
+
+        // notify Gradebook service (stateless, no shared database) so it
+        // removes its corresponding enrollment record.
+        gradebook.sendMessage("deleteEnrollment", enrollmentId);
+    }
+
+    private EnrollmentDTO toDTO(Enrollment enrollment) {
+        Section section = enrollment.getSection();
+        User student = enrollment.getStudent();
+        return new EnrollmentDTO(
+                enrollment.getEnrollmentId(),
+                enrollment.getGrade(),
+                student.getId(),
+                student.getName(),
+                student.getEmail(),
+                section.getCourse().getCourseId(),
+                section.getCourse().getTitle(),
+                section.getSectionId(),
+                section.getSectionNo(),
+                section.getBuilding(),
+                section.getRoom(),
+                section.getTimes(),
+                section.getCourse().getCredits(),
+                section.getTerm().getYear(),
+                section.getTerm().getSemester()
+        );
     }
 
 }
+
+
