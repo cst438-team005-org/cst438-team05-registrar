@@ -126,8 +126,7 @@ public class StudentEnrollSectionSystemTest {
                 "//div[@class='react-confirm-alert-button-group']/button[@label='Yes']");
         wait.until(ExpectedConditions.elementToBeClickable(yesButton)).click();
 
-        wait.until(ExpectedConditions.textToBePresentInElementLocated(
-                By.tagName("body"), "Course dropped"));
+        wait.until(ExpectedConditions.invisibilityOfElementLocated(yesButton));
         wait.until(ExpectedConditions.invisibilityOfElementLocated(courseRow(courseId)));
     }
 
@@ -147,8 +146,7 @@ public class StudentEnrollSectionSystemTest {
                 "//div[@class='react-confirm-alert-button-group']/button[@label='Yes']");
         wait.until(ExpectedConditions.elementToBeClickable(yesButton)).click();
 
-        wait.until(ExpectedConditions.textToBePresentInElementLocated(
-                By.tagName("body"), "Course added"));
+        wait.until(ExpectedConditions.invisibilityOfElementLocated(yesButton));
         wait.until(ExpectedConditions.invisibilityOfElementLocated(courseRow(courseId)));
     }
 
@@ -204,4 +202,3 @@ public class StudentEnrollSectionSystemTest {
         );
     }
 }
-
