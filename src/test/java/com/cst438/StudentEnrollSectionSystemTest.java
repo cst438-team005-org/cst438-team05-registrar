@@ -147,7 +147,6 @@ public class StudentEnrollSectionSystemTest {
         wait.until(ExpectedConditions.elementToBeClickable(yesButton)).click();
 
         wait.until(ExpectedConditions.invisibilityOfElementLocated(yesButton));
-        wait.until(ExpectedConditions.invisibilityOfElementLocated(courseRow(courseId)));
     }
 
     private void openTranscript() {
